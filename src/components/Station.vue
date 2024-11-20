@@ -20,10 +20,15 @@ const props = defineProps({
   }
 })
 
+let mediaSource = new MediaSource()
+let audioURL = URL.createObjectURL(mediaSource)
+let sourceBuffer = null
+let abortController = null
+
 let metaUrl = `https://careful-poodle-proven.ngrok-free.app/v1/${props.name}/meta`
 let streamUrl = `https://careful-poodle-proven.ngrok-free.app/v1/${props.name}/stream`
 // let streamUrl = `http://192.168.0.103:8081/v1/${props.name}/stream`
-let streamSource = ref(null)
+let streamSource = ref(audioURL)
 
 const title = ref('Loading...')
 const artist = ref('Loading...')
@@ -42,18 +47,53 @@ var audio = ref(null)
 let progressUpdateTimer = null
 let stopwatchUpdateTimer = null
 
-async function fetchAudio() {
-  // console.log('foo')
+async function startStreaming() {
+  sourceBuffer = mediaSource.addSourceBuffer("audio/mpeg");
+  abortController = new AbortController()
 
-  // if (!window.MediaSource || !MediaSource.isTypeSupported("audio/mpeg")) {
-  //   console.error("MediaSource API or audio/mpeg not supported")
-  //   return
-  // }
+  try {
+     // Use Fetch API to stream audio data
+     const response = await fetch(streamUrl, {
+       headers: {
+         'ngrok-skip-browser-warning': 'foo'
+       },
+       signal: abortController.signal
+     });
 
-  const mediaSource = new MediaSource()
-  const audioURL = URL.createObjectURL(mediaSource)
+     if (!response.body) {
+       throw new Error("ReadableStream not supported in this environment");
+     }
+
+     const reader = response.body.getReader();
+     let done = false;
+
+     while (!done) {
+       const { value, done: streamDone } = await reader.read();
+       if (value) {
+         // Append received data to the source buffer
+         sourceBuffer.appendBuffer(value);
+       }
+       done = streamDone;
+     }
+
+     // Signal the end of the stream
+     mediaSource.endOfStream();
+   } catch (error) {
+     console.error("Error during streaming:", error);
+     mediaSource.endOfStream("error");
+   }
+}
+
+async function stopStreaming() {
+  // mediaSource.removeSourceBuffer(sourceBuffer)
+  abortController.abort()
+  mediaSource = new MediaSource()
+  audioURL = URL.createObjectURL(mediaSource)
   streamSource.value = audioURL
+  // mediaSource.endOfStream('error')
+}
 
+async function fetchAudio() {
   mediaSource.addEventListener("sourceopen", async () => {
     // console.log('buffer')
 
@@ -89,32 +129,6 @@ async function fetchAudio() {
        console.error("Error during streaming:", error);
        mediaSource.endOfStream("error");
      }
-
-    // try {
-    //   // Stream audio data in chunks
-    //   const response = await axios.get(streamUrl, {
-    //     responseType: "stream",
-    //     headers: {
-    //       'ngrok-skip-browser-warning': 'foo'
-    //     }
-    //   })
-
-    //   const reader = response.data.getReader();
-
-    //   let done = false;
-    //   while (!done) {
-    //     const { value, done: streamDone } = await reader.read();
-    //     if (value) {
-    //       sourceBuffer.appendBuffer(value.buffer)
-    //     }
-    //     done = streamDone
-    //   }
-
-    //   mediaSource.endOfStream();
-    // } catch (error) {
-    //   console.error("Error during streaming:", error)
-    //   mediaSource.endOfStream("error")
-    // }
   })
 
   // try {
@@ -134,11 +148,13 @@ async function fetchAudio() {
 }
 
 function play() {
+  startStreaming()
   audio.value.play()
   playing.value = true
 }
 
 function stop() {
+  stopStreaming()
   audio.value.pause()
   playing.value = false
 }
@@ -232,7 +248,7 @@ function refreshData () {
   })
 }
 
-fetchAudio()
+// fetchAudio()
 refreshData()
 
 if (playing.value) {

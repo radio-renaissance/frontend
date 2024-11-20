@@ -8,10 +8,10 @@ const props = defineProps({
   },
   progressUpdatePeriod: {
     type: Number,
-    default: 2000
+    default: 100
   },
   playing: {
-    type: Boolean,
+    type: String,
     default: false
   },
   lineLength: {
@@ -28,7 +28,8 @@ const title = ref('Loading...')
 const artist = ref('Loading...')
 
 const duration = ref<number>(null)
-const elapsed = ref<number>(null)
+const elapsedProgress = ref<number>(null)
+const elapsedStopwatch = ref<number>(null)
 const remaining = ref<number>(null)
 
 const progress = ref<number>(null)
@@ -37,7 +38,8 @@ const playing = ref<boolean>(props.playing)
 // var audio = new Audio(streamUrl)
 var audio = ref(null)
 
-let timer = null
+let progressUpdateTimer = null
+let stopwatchUpdateTimer = null
 
 function play() {
   audio.value.play()
@@ -53,24 +55,45 @@ function stop() {
 }
 
 function updateProgress() {
-  progress.value = elapsed.value / duration.value
+  progress.value = elapsedProgress.value / duration.value
+}
+
+function padd(value, nZeros) {
+  const valueAsString = '' + value
+
+  if (valueAsString.length < nZeros) {
+    let padding = ''
+
+    for (let i = 0; i < nZeros - valueAsString.length; i++) {
+      padding += '0'
+    }
+
+    return padding + valueAsString
+  }
+
+  return valueAsString
 }
 
 function pad(value, nZeros) {
-  const roundedValue = '' + (Math.floor(value * Math.pow(10, nZeros)) / Math.pow(10, nZeros))
-  const components = roundedValue.split('.')
+  const minutes = Math.floor(value / 60)
+  const seconds = value - minutes * 60
 
-  if (components.length < 2) {
-    components[1] = ''
-  } 
+  return `${padd(minutes, nZeros + 1)}:${padd(seconds, nZeros)}`
 
-  let padding = ''
+  // const roundedValue = '' + (Math.floor(value * Math.pow(10, nZeros)) / Math.pow(10, nZeros))
+  // const components = roundedValue.split('.')
 
-  for (let i = 0; i < nZeros - components[1].length; i++) {
-    padding += '0'
-  }
+  // if (components.length < 2) {
+  //   components[1] = ''
+  // } 
 
-  return `${components[0]}.${components[1]}${padding}`
+  // let padding = ''
+
+  // for (let i = 0; i < nZeros - components[1].length; i++) {
+  //   padding += '0'
+  // }
+
+  // return `${components[0]}.${components[1]}${padding}`
 }
 
 function truncate(str) {
@@ -92,29 +115,37 @@ function refreshData () {
     artist.value = truncate(response.data['artist'])
   
     duration.value = response.data.duration
-    elapsed.value = response.data.elapsed
+    elapsedProgress.value = response.data.elapsed
+    elapsedStopwatch.value = response.data.elapsed
     remaining.value = response.data.remaining
 
     // audio = new Audio(``)
   
     updateProgress()
   
-    timer = setInterval(() => {
-      elapsed.value = Math.min(elapsed.value + props.progressUpdatePeriod / 1000, duration.value)
+    progressUpdateTimer = setInterval(() => {
+      elapsedProgress.value = Math.min(elapsedProgress.value + props.progressUpdatePeriod / 1000, duration.value)
 
-      if (elapsed.value >= duration.value) {
-        clearInterval(timer)
-        refreshData()
-      } else {
+      if (elapsedProgress.value < duration.value) {
         updateProgress()
       }
     }, props.progressUpdatePeriod)
+
+    stopwatchUpdateTimer = setInterval(() => {
+      elapsedStopwatch.value = Math.min(elapsedStopwatch.value + 1, duration.value)
+
+      if (elapsedStopwatch.value >= duration.value) {
+        clearInterval(progressUpdateTimer)
+        clearInterval(stopwatchUpdateTimer)
+        refreshData()
+      }
+    }, 1000)
   })
 }
 
 refreshData()
 
-if (props.playing) {
+if (props.playing === 'true') {
   watch(audio, (newValue, oldValue) => {
     newValue.play()
   })
@@ -156,7 +187,7 @@ if (props.playing) {
     <p class="artist">{{ artist }}</p>
     <!--<p class="progress">{{ Math.round(progress * 10000) / 100 }}</p>-->
     <div class='bar-wrapper'>
-      <p class='duration'>{{ pad(elapsed, 2) }}</p>
+      <p class='duration'>{{ pad(elapsedStopwatch, 2) }}</p>
       <div class='bar-container'>
         <div class='bar' :style='`width: ${progress * 100}%`'></div>
       </div>

@@ -5,7 +5,7 @@ import Station from './components/Station.vue'
 <template>
   <div class='column-container'>
     <Station name="pranks" />
-    <Station name="anus" playing=true />
+    <Station name="anus" />
     <Station name="2ch" />
     <Station name="314" />
     <Station name="baneks" />

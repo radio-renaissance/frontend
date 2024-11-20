@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import axios from 'axios'
 import { ref, watch } from 'vue'
+import config from '../../config.json'
 
 const props = defineProps({
   name: {
@@ -20,13 +21,19 @@ const props = defineProps({
   }
 })
 
+// const protocol = 'http'
+// const host = 'careful-poodle-proven.ngrok-free.app'
+// const host = '192.168.0.103'
+// const port = 80
+// const port = 8081
+
 let mediaSource = new MediaSource()
 let audioURL = URL.createObjectURL(mediaSource)
 let sourceBuffer = null
 let abortController = null
 
-let metaUrl = `https://careful-poodle-proven.ngrok-free.app/v1/${props.name}/meta`
-let streamUrl = `https://careful-poodle-proven.ngrok-free.app/v1/${props.name}/stream`
+let metaUrl = `${config.protocol}://${config.host}:${config.port}/v1/${props.name}/meta`
+let streamUrl = `${config.protocol}://${config.host}:${config.port}/v1/${props.name}/stream`
 // let streamUrl = `http://192.168.0.103:8081/v1/${props.name}/stream`
 let streamSource = ref(audioURL)
 
@@ -71,7 +78,11 @@ async function startStreaming() {
        const { value, done: streamDone } = await reader.read();
        if (value) {
          // Append received data to the source buffer
-         sourceBuffer.appendBuffer(value);
+         try {
+           sourceBuffer.appendBuffer(value);
+         } catch (error) {
+           console.warn('Appending to buffer did not succeed')
+         }
        }
        done = streamDone;
      }
@@ -148,13 +159,13 @@ async function fetchAudio() {
 }
 
 function play() {
-  startStreaming()
+  // startStreaming()
   audio.value.play()
   playing.value = true
 }
 
 function stop() {
-  stopStreaming()
+  // stopStreaming()
   audio.value.pause()
   playing.value = false
 }
@@ -286,7 +297,8 @@ if (playing.value) {
 </script>
 
 <template>
-  <audio :src="streamSource" preload="auto" id="player" ref='audio'></audio>
+  <!--<audio :src="streamSource" preload="auto" id="player" ref='audio'></audio>-->
+  <audio :src="streamUrl" preload="auto" id="player" ref='audio'></audio>
   <div class='root'>
     <p class="title">{{ title }}</p>
     <p class="artist">{{ artist }}</p>

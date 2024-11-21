@@ -34,6 +34,8 @@ let abortController = null
 
 let metaUrl = `${config.protocol}://${config.host}:${config.port}/v1/${props.name}/meta`
 let streamUrl = `${config.protocol}://${config.host}:${config.port}/v1/${props.name}/stream`
+let downloadBaseUrl = `${config.protocol}://${config.host}:${config.port}/v1/${props.name}/download`
+let artId = null
 // let streamUrl = `http://192.168.0.103:8081/v1/${props.name}/stream`
 let streamSource = ref(audioURL)
 
@@ -215,6 +217,54 @@ function truncate(str) {
   return str
 }
 
+async function downloadMp3(url) {
+  try {
+    // Fetch the file as a blob
+    const response = await axios.get(url, {
+      responseType: 'blob', // Important to get the file as a Blob
+    });
+
+    let fileName = 'audio.mp3'
+    const contentDisposition = response.headers['content-disposition']
+
+    // console.log(contentDisposition)
+
+    if (contentDisposition) {
+      // const fileNameMatch = contentDisposition.match(/filename\*=UTF-8''(.+)|filename="(.+)"/)
+      const fileNameMatch = contentDisposition.match(/filename\*=UTF-8''(.+)/)
+      if (fileNameMatch) {
+        fileName = decodeURIComponent(fileNameMatch[1] || fileNameMatch[2])
+      }
+    }
+
+    // Create a Blob from the response data
+    const blob = new Blob([response.data], { type: 'audio/mpeg' })
+
+    // Create a link element
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob) // Create a URL for the Blob
+    link.download = fileName // Set the desired file name
+
+    // Append the link to the document, trigger the download, and remove the link
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    // Optional: Revoke the URL object to free up resources
+    URL.revokeObjectURL(link.href)
+  } catch (error) {
+    console.error('Error downloading the MP3 file:', error);
+  }
+}
+
+function download() {
+  const downloadUrl = `${downloadBaseUrl}/${artId}`
+  // console.log(downloadUrl)
+
+  downloadMp3(downloadUrl)
+  // window.open(downloadUrl)
+}
+
 function refreshData () {
   axios.get(metaUrl, {
     headers: config.headers
@@ -223,6 +273,7 @@ function refreshData () {
 
     title.value = truncate(response.data['title'])
     artist.value = truncate(response.data['artist'])
+    artId = response.data['art-id']
   
     duration.value = response.data.duration
     elapsedProgress.value = response.data.elapsed
@@ -303,6 +354,7 @@ if (playing.value) {
         <div class='bar' :style='`width: ${progress * 100}%`'></div>
       </div>
       <p class='duration'>{{ pad(duration, 2) }}</p>
+      <p class='control-button' @click='download'>download</p>
       <p class='control-button' @click='playing ? stop() : play()'>{{ playing ? 'stop' : 'play'}}</p>
     </div>
   </div>

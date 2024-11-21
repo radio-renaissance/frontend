@@ -61,9 +61,7 @@ async function startStreaming() {
   try {
      // Use Fetch API to stream audio data
      const response = await fetch(streamUrl, {
-       headers: {
-         'ngrok-skip-browser-warning': 'foo'
-       },
+       headers: config.headers,
        signal: abortController.signal
      });
 
@@ -113,9 +111,7 @@ async function fetchAudio() {
     try {
        // Use Fetch API to stream audio data
        const response = await fetch(streamUrl, {
-         headers: {
-           'ngrok-skip-browser-warning': 'foo'
-         },
+         headers: config.headers,
        });
 
        if (!response.body) {
@@ -221,9 +217,7 @@ function truncate(str) {
 
 function refreshData () {
   axios.get(metaUrl, {
-    headers: {
-      'ngrok-skip-browser-warning': 'foo'
-    }
+    headers: config.headers
   }).then(response => {
     // console.log(response.data)
 

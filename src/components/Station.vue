@@ -2,6 +2,7 @@
 import axios from 'axios'
 import { ref, watch } from 'vue'
 import config from '../../config.json'
+import { useRouter } from 'vue-router'
 
 const props = defineProps({
   name: {
@@ -18,6 +19,10 @@ const props = defineProps({
   lineLength: {
     type: Number,
     default: 50
+  },
+  focused: {
+    type: String,
+    default: 'false'
   }
 })
 
@@ -26,6 +31,8 @@ const props = defineProps({
 // const host = '192.168.0.103'
 // const port = 80
 // const port = 8081
+
+const router = useRouter()
 
 let mediaSource = new MediaSource()
 let audioURL = URL.createObjectURL(mediaSource)
@@ -49,6 +56,7 @@ const remaining = ref<number>(null)
 
 const progress = ref<number>(null)
 const playing = ref<boolean>(props.playing === 'true')
+const focused = ref<boolean>(props.focused === 'true')
 
 // var audio = new Audio(streamUrl)
 var audio = ref(null)
@@ -265,6 +273,14 @@ function download() {
   // window.open(downloadUrl)
 }
 
+function focus() {
+  if (focused.value) {
+    router.push('/')
+  } else {
+    router.push(`/${props.name}`)
+  }
+}
+
 function refreshData () {
   axios.get(metaUrl, {
     headers: config.headers
@@ -354,6 +370,7 @@ if (playing.value) {
         <div class='bar' :style='`width: ${progress * 100}%`'></div>
       </div>
       <p class='duration'>{{ pad(duration, 2) }}</p>
+      <p class='control-button' @click='focus'>{{ focused ? 'back' : 'focus' }}</p>
       <p class='control-button' @click='download'>download</p>
       <p class='control-button' @click='playing ? stop() : play()'>{{ playing ? 'stop' : 'play'}}</p>
     </div>
@@ -401,5 +418,8 @@ p.artist {
   font-family: monospace;
   margin-left: 10px;
   cursor: pointer;
+}
+.control-button:hover {
+  color: red;
 }
 </style>

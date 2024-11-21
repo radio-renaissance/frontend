@@ -362,17 +362,23 @@ if (playing.value) {
 
 <style scoped>
 .root {
-  margin: 50px 0;
+  margin: 10px 0;
+  float: none;
 }
 p {
   color: white;
 }
 p.title {
-  font-size:2rem;
+  font-size: 1.5rem;
   font-weight: bold;
 }
 p.artist {
-  font-size:1.5rem;
+  font-size: 1.2rem;
+}
+.bar-wrapper {
+  margin-top: 10px;
+  margin-bottom: 25px;
+  height: 20px;
 }
 .bar-wrapper p, .bar-wrapper div {
   float: left;

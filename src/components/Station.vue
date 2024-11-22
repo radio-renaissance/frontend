@@ -58,6 +58,10 @@ const progress = ref<number>(null)
 const playing = ref<boolean>(props.playing === 'true')
 const focused = ref<boolean>(props.focused === 'true')
 
+let completed = false
+let completedRetryMetaRequestPeriod = 0
+let completedCounter = 0
+
 // var audio = new Audio(streamUrl)
 var audio = ref(null)
 
@@ -312,9 +316,30 @@ function refreshData () {
       elapsedStopwatch.value = Math.min(elapsedStopwatch.value + 1, duration.value)
 
       if (elapsedStopwatch.value >= duration.value) {
-        clearInterval(progressUpdateTimer)
-        clearInterval(stopwatchUpdateTimer)
-        refreshData()
+        // console.log('foo', completed, completedCounter >= completedRetryMetaRequestPeriod)
+
+        if (completed) {
+          if (completedCounter >= completedRetryMetaRequestPeriod) {
+            completedRetryMetaRequestPeriod = completedRetryMetaRequestPeriod * 2
+            completedCounter = 0
+
+	    // console.log('refresh data...')
+
+            clearInterval(progressUpdateTimer)
+            clearInterval(stopwatchUpdateTimer)
+            refreshData()
+          } else {
+            completedCounter = completedCounter + 1
+          }
+        } else {
+          completed = true
+          completedRetryMetaRequestPeriod = 2
+          completedCounter = 0
+        }
+      } else if (completed) {
+        completed = false
+        completedRetryMetaRequestPeriod = 0
+        completedCounter = 0
       }
     }, 1000)
   })
